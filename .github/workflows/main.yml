@@ -1,8 +1,8 @@
-name: Build and Push to GHCR
+name: Deploy Gradio App
 
 on:
   push:
-    branches: [ main ]  # 注意：分支名是 main，不是 master
+    branches: [ main ]
     paths:
       - 'app/**'
       - 'run_app.py'
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # 必须有权限写入 GHCR
+      packages: write
 
     steps:
       - name: Checkout code
