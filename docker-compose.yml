@@ -1,42 +1,37 @@
-services:
-  web: # Gradio Web 应用
-    build: .  # 使用当前目录的 Dockerfile
-    image: ghcr.io/your-github-username/gradio-app:latest
-    ports:
-      - "7860:7860" # 主机端口:容器端口
-    depends_on:
-      - redis  # 依赖 redis 服务
-      - db
-    environment:  # 设置环境变量
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DB_HOST=db
-      - DB_NAME=myapp
-      - DB_USER=postgres
-      - DB_PASSWORD=mypassword
-    env_file:
-      - .env
+name: Build and Push to GHCR
 
-# Redis 缓存服务
-  redis:
-    image: redis:7-alpine  # 使用官方redis镜像
-    ports:
-      - "6379:6379" # redis默认端口
-    volumes:
-      - redis_data:/data # 数据持久化
-  db:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: myapp
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mypassword
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env
+on:
+  push:
+    branches: [ main ]  # 注意：分支名是 main，不是 master
+    paths:
+      - 'app/**'
+      - 'run_app.py'
+      - 'Dockerfile'
 
-volumes:
-  redis_data: {} # 定义命名卷
-  postgres_data: {}
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # 必须有权限写入 GHCR
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/gradio-app:latest
