@@ -2,7 +2,7 @@ name: Build and Push to GHCR
 
 on:
   push:
-    branches: [ main ]  # 注意：分支名是 main，不是 master
+    branches: [ master ]  # 注意：分支名是 main，不是 master
     paths:
       - 'app/**'
       - 'run_app.py'
