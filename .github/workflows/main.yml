@@ -1,4 +1,4 @@
-name: Deploy Gradio App
+﻿name: Deploy Gradio App
 
 on:
   push:
