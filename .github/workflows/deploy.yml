@@ -1,55 +1,42 @@
-name: Deploy Gradio App
-on:
-  branches: [ master ]
-  push:
-    - 'app/**'
-    - 'run_app.py'
-    - 'Dockerfile'
-    - 'docker-compose.yml'
-    - '.env'
+services:
+  web: # Gradio Web 应用
+    build: .  # 使用当前目录的 Dockerfile
+    image: ghcr.io/your-github-username/gradio-app:latest
+    ports:
+      - "7860:7860" # 主机端口:容器端口
+    depends_on:
+      - redis  # 依赖 redis 服务
+      - db
+    environment:  # 设置环境变量
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_HOST=db
+      - DB_NAME=myapp
+      - DB_USER=postgres
+      - DB_PASSWORD=mypassword
+    env_file:
+      - .env
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# Redis 缓存服务
+  redis:
+    image: redis:7-alpine  # 使用官方redis镜像
+    ports:
+      - "6379:6379" # redis默认端口
+    volumes:
+      - redis_data:/data # 数据持久化
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mypassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
 
-      - name: Set Up Docker Buildx # 设置 Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub # 登录 Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build And Push Docker Image # 构建并推送 Docker 镜像
-        uses: docker/build-push-act@v5
-        with:
-          context: . # 使用当前目录作为构建上下文
-          push: true # 构建后自动推送镜像
-          tags: ${{ secrets.DOCKER_REPO }}:latest # 镜像标签
-          build-args:
-            BUILDKIT_INLINE_CACHE=1 # 启用 BuildKit 缓存
-            DOCKER_BUILDKIT=1 # 强制使用 BuildKit
-
-      - name: Deploy to server #  部署到服务器（文件传输）
-        uses: appleboy/scp-action@master # scp-action：安全复制文件到服务器
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }} # 使用 GitHub Secrets 存储 SSH 私钥
-          source: "docker-compose.yml"
-          target: "/home/user/app/docker-compose.yml"
-
-      - name: Restart app on server # 重启应用
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: | # down + up 确保使用最新镜像 restart 可能不会拉取新镜像
-            cd /home/user/app
-            docker-compose down
-            docker-compose up -d
+volumes:
+  redis_data: {} # 定义命名卷
+  postgres_data: {}
