@@ -2,18 +2,14 @@
 
 on:
   push:
-    branches: [ master ]
-    paths:
-      - 'app/**'
-      - 'run_app.py'
-      - 'Dockerfile'
+    branches: [ master ]  # 或 main，根据你的分支名
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: write     # ← 这行必须存在！
 
     steps:
       - name: Checkout code
